@@ -1,0 +1,25 @@
+# Compilación
+build/
+sdkconfig.old
+
+# Configuración local
+sdkconfig
+managed_components/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Editores
+.vscode/
+.idea/
+*.swp
+*~
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# Archivos temporales
+*.log
