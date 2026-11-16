@@ -39,6 +39,7 @@ static motor_status_callback_t status_callback;
 typedef struct {
     uint8_t buttons;         /* Máscara binaria de los botones pulsados.
                              * Bitmask of pressed buttons. */
+    uint8_t turn_percent;    /* Intensidad 0..100 %. / Intensity 0..100%. */
     TickType_t received_at;  /* Instante de recepción para detectar comandos vencidos.
                              * Reception time used to detect expired commands. */
 } motor_command_t;
@@ -131,7 +132,7 @@ static void motor_task(void *arg)
         }
         /* La lógica de movimiento gestiona botones, rampa, inversión y timeout.
          * The motion logic handles buttons, ramping, reversal, and timeout. */
-        motor_motion_update(&motion, received, command.buttons, elapsed);
+        motor_motion_update(&motion, received, command.buttons, command.turn_percent, elapsed);
         /* Incluye en la antigüedad el tiempo que el comando pasó en la cola.
          * Includes time spent in the queue in the command age. */
         if (received) motion.age_ms = (now - command.received_at) * portTICK_PERIOD_MS;
@@ -249,14 +250,15 @@ esp_err_t motor_control_init(motor_status_callback_t callback)
 
 /* Recibe comandos sin bloquear; su aplicación al hardware ocurre en motor_task.
  * Receives commands without blocking; motor_task applies them to the hardware. */
-esp_err_t motor_control_command(uint8_t buttons)
+esp_err_t motor_control_command(uint8_t buttons, uint8_t turn_percent)
 {
     if (!commands) return ESP_ERR_INVALID_STATE;
     /* Los botones inválidos se sustituyen por cero para solicitar una parada.
      * Invalid buttons are replaced with zero to request a stop. */
-    bool valid = motor_buttons_valid(buttons);
+    bool valid = motor_buttons_valid(buttons) && turn_percent <= 100;
     motor_command_t command = {
         .buttons = valid ? buttons : 0,
+        .turn_percent = valid ? turn_percent : 0,
         .received_at = xTaskGetTickCount(),
     };
     /* Reemplaza cualquier comando pendiente: siempre interesa el más reciente.
@@ -271,5 +273,5 @@ void motor_control_stop(void)
 {
     /* Encola cero botones; la tarea de control ejecutará la parada.
      * Queues zero buttons; the control task will perform the stop. */
-    (void)motor_control_command(0);
+    (void)motor_control_command(0, 0);
 }

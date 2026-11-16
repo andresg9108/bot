@@ -24,7 +24,9 @@ esp_err_t motor_control_init(motor_status_callback_t callback);
  * Entrada inválida: solicita parada y devuelve ESP_ERR_INVALID_ARG.
  * Non-blocking; keeps the latest command. Send every 100 ms.
  * Invalid input: requests a stop and returns ESP_ERR_INVALID_ARG. */
-esp_err_t motor_control_command(uint8_t buttons);
+/* Giro 0..100 %; solo se aplica con izquierda/derecha.
+ * Steering 0..100%; only applied with left/right. */
+esp_err_t motor_control_command(uint8_t buttons, uint8_t turn_percent);
 void motor_control_stop(void);
 
 #endif

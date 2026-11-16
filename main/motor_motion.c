@@ -48,33 +48,36 @@ static motor_targets_t move_backward(motor_motion_t *motion, uint32_t elapsed_ms
     return targets;
 }
 
-static void turn_left(motor_targets_t *targets)
+static void turn_left(motor_targets_t *targets, uint8_t turn_percent)
 {
     /* Marcha atrás: izquierda describe la trayectoria del auto.
      * In reverse, left describes the car's trajectory. */
-    if (targets->direction > 0) targets->left = targets->left * MOTOR_TURN_PERCENT / 100;
-    else targets->right = targets->right * MOTOR_TURN_PERCENT / 100;
+    if (targets->direction > 0) targets->left = targets->left * (100u - turn_percent) / 100;
+    else targets->right = targets->right * (100u - turn_percent) / 100;
 }
 
-static void turn_right(motor_targets_t *targets)
+static void turn_right(motor_targets_t *targets, uint8_t turn_percent)
 {
-    if (targets->direction > 0) targets->right = targets->right * MOTOR_TURN_PERCENT / 100;
-    else targets->left = targets->left * MOTOR_TURN_PERCENT / 100;
+    if (targets->direction > 0) targets->right = targets->right * (100u - turn_percent) / 100;
+    else targets->left = targets->left * (100u - turn_percent) / 100;
 }
 
 void motor_motion_update(motor_motion_t *motion, bool received, uint8_t buttons,
-                         uint32_t elapsed_ms)
+                         uint8_t turn_percent, uint32_t elapsed_ms)
 {
     /* Cada comando renueva el plazo de comunicación.
      * Each command renews the communication timeout. */
     if (received) {
-        motion->buttons = motor_buttons_valid(buttons) ? buttons : 0;
+        bool valid = motor_buttons_valid(buttons) && turn_percent <= 100;
+        motion->buttons = valid ? buttons : 0;
+        motion->turn_percent = valid ? turn_percent : 0;
         motion->age_ms = 0;
         motion->timed_out = false;
     } else {
         motion->age_ms = advance(motion->age_ms, elapsed_ms, MOTOR_COMMAND_TIMEOUT_MS);
         if (motion->age_ms == MOTOR_COMMAND_TIMEOUT_MS && motion->buttons) {
             motion->buttons = 0;
+            motion->turn_percent = 0;
             motion->timed_out = true;
         }
     }
@@ -102,8 +105,8 @@ void motor_motion_update(motor_motion_t *motion, bool received, uint8_t buttons,
      * Combines acceleration and steering based on the buttons. */
     motor_targets_t targets = requested > 0 ? accelerate_forward(motion, elapsed_ms) :
                                             move_backward(motion, elapsed_ms);
-    if (motion->buttons & MOTOR_LEFT) turn_left(&targets);
-    if (motion->buttons & MOTOR_RIGHT) turn_right(&targets);
+    if (motion->buttons & MOTOR_LEFT) turn_left(&targets, motion->turn_percent);
+    if (motion->buttons & MOTOR_RIGHT) turn_right(&targets, motion->turn_percent);
     motion->left_pwm = approach(motion->left_pwm, targets.left, elapsed_ms);
     motion->right_pwm = approach(motion->right_pwm, targets.right, elapsed_ms);
 }

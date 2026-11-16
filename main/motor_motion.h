@@ -12,13 +12,14 @@
 #define MOTOR_ACCELERATION_MS 3000u
 #define MOTOR_REVERSE_PAUSE_MS 100u
 #define MOTOR_COMMAND_TIMEOUT_MS 500u
-#define MOTOR_TURN_PERCENT 50u
+#define MOTOR_DEFAULT_TURN_PERCENT 50u
 #define MOTOR_PWM_MAX 1023u
 
 /* Estado interno; todos los campos en cero significan detenido.
  * Internal state; all fields at zero mean stopped. */
 typedef struct {
     uint8_t buttons;
+    uint8_t turn_percent; /* Intensidad de giro, 0..100. / Steering intensity, 0..100. */
     int direction; /* -1: atrás, 0: detenido, 1: adelante.
                     * -1: backward, 0: stopped, 1: forward. */
     uint32_t ramp_ms;
@@ -31,6 +32,6 @@ typedef struct {
 
 bool motor_buttons_valid(uint8_t buttons);
 void motor_motion_update(motor_motion_t *motion, bool received, uint8_t buttons,
-                         uint32_t elapsed_ms);
+                         uint8_t turn_percent, uint32_t elapsed_ms);
 
 #endif

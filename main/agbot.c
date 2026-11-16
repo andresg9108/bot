@@ -54,18 +54,19 @@ static void on_ble_event(const agble_server_event_t *event, void *context)
     (void)context;
     switch (event->type) {
     case AGBLE_SERVER_COMMAND: {
-        /* El protocolo exige un byte binario de botones y datos accesibles.
-         * The protocol requires one binary button byte and accessible data. */
-        if (event->length != 1 || !event->data) {
+        /* Botones y porcentaje opcional; un byte conserva el giro al 50 %.
+         * Buttons and optional percentage; one byte preserves 50% steering. */
+        if ((event->length != 1 && event->length != 2) || !event->data) {
             /* Un paquete mal formado solicita la parada en la tarea de motores.
              * A malformed packet requests a stop in the motor task. */
             motor_control_stop();
-            ESP_LOGW(TAG, "Comando invalido: se requiere un byte binario de botones");
+            ESP_LOGW(TAG, "Comando invalido: se requieren botones y porcentaje opcional");
             break;
         }
         /* Encola los botones; la tarea de motores valida y calcula el movimiento.
          * Queues the buttons; the motor task validates and calculates motion. */
-        esp_err_t err = motor_control_command(event->data[0]);
+        uint8_t turn_percent = event->length == 2 ? event->data[1] : MOTOR_DEFAULT_TURN_PERCENT;
+        esp_err_t err = motor_control_command(event->data[0], turn_percent);
         if (err != ESP_OK) ESP_LOGW(TAG, "Comando rechazado: %s", esp_err_to_name(err));
         break;
     }
